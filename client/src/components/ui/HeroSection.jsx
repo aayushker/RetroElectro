@@ -1,12 +1,20 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function HeroSection() {
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    // This will be implemented later with actual functionality
-    console.log('Search query:', searchQuery);
+    if (searchQuery.trim()) {
+      navigate(`/results?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+  
+  const handlePopularSearch = (query) => {
+    setSearchQuery(query);
+    navigate(`/results?q=${encodeURIComponent(query)}`);
   };
   
   return (
@@ -39,19 +47,19 @@ function HeroSection() {
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <p className="text-blue-200">Popular searches:</p>
             <button 
-              onClick={() => setSearchQuery("Best gaming laptop under $1500")}
+              onClick={() => handlePopularSearch("Best gaming laptop under $1500")}
               className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors"
             >
               Gaming laptop under $1500
             </button>
             <button 
-              onClick={() => setSearchQuery("Smartphone with best camera")}
+              onClick={() => handlePopularSearch("Smartphone with best camera")}
               className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors"
             >
               Smartphone with best camera
             </button>
             <button 
-              onClick={() => setSearchQuery("Noise cancelling headphones")}
+              onClick={() => handlePopularSearch("Noise cancelling headphones")}
               className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors"
             >
               Noise cancelling headphones
