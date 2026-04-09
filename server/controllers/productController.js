@@ -1,5 +1,61 @@
 const prisma = require("../lib/prisma");
 
+const RETRYABLE_PRISMA_CODES = new Set(["P1001", "P1002", "P1017"]);
+const PRODUCTS_CACHE_TTL_MS = 30 * 1000;
+
+const productsCache = new Map();
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryablePrismaError = (error) =>
+  RETRYABLE_PRISMA_CODES.has(String(error?.code || ""));
+
+const getProductsCacheKey = ({ where, limit }) =>
+  JSON.stringify({ where, limit });
+
+const getCachedProducts = (cacheKey) => {
+  const entry = productsCache.get(cacheKey);
+
+  if (!entry) {
+    return null;
+  }
+
+  const ageMs = Date.now() - entry.updatedAt;
+  return {
+    data: entry.data,
+    ageMs,
+    isFresh: ageMs < PRODUCTS_CACHE_TTL_MS,
+  };
+};
+
+const setCachedProducts = (cacheKey, products) => {
+  productsCache.set(cacheKey, {
+    data: products,
+    updatedAt: Date.now(),
+  });
+};
+
+const findProductsWithRetry = async (args, maxRetries = 2) => {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      return await prisma.product.findMany(args);
+    } catch (error) {
+      lastError = error;
+
+      if (!isRetryablePrismaError(error) || attempt === maxRetries) {
+        throw error;
+      }
+
+      const backoffMs = 200 * (attempt + 1);
+      await sleep(backoffMs);
+    }
+  }
+
+  throw lastError;
+};
+
 const toIntOrNull = (value) => {
   if (value === undefined || value === null || value === "") {
     return null;
@@ -63,6 +119,8 @@ const validatePayload = (payload) => {
 // @route   GET /api/products
 // @access  Public
 exports.getProducts = async (req, res) => {
+  let cacheKey = null;
+
   try {
     const limit = Math.min(
       Math.max(Number.parseInt(req.query.limit, 10) || 50, 1),
@@ -75,23 +133,64 @@ exports.getProducts = async (req, res) => {
     }
 
     if (req.query.maxPriceInr) {
-      where.priceInr = {
-        lte: Number.parseInt(req.query.maxPriceInr, 10),
-      };
+      const parsedMaxPrice = Number.parseInt(req.query.maxPriceInr, 10);
+
+      if (Number.isFinite(parsedMaxPrice)) {
+        where.priceInr = {
+          lte: parsedMaxPrice,
+        };
+      }
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      orderBy: [{ priceInr: "asc" }, { rating: "desc" }],
-      take: limit,
-    });
+    cacheKey = getProductsCacheKey({ where, limit });
+    const cachedProducts = getCachedProducts(cacheKey);
 
-    res
-      .status(200)
-      .json({ success: true, count: products.length, data: products });
+    if (cachedProducts?.isFresh) {
+      return res.status(200).json({
+        success: true,
+        count: cachedProducts.data.length,
+        data: cachedProducts.data,
+      });
+    }
+
+    const products = await findProductsWithRetry(
+      {
+        where,
+        orderBy: [{ priceInr: "asc" }, { rating: "desc" }],
+        take: limit,
+      },
+      2,
+    );
+
+    setCachedProducts(cacheKey, products);
+
+    return res.status(200).json({ success: true, count: products.length, data: products });
   } catch (error) {
+    if (isRetryablePrismaError(error)) {
+      const staleProducts = cacheKey ? getCachedProducts(cacheKey) : null;
+
+      if (staleProducts?.data?.length) {
+        console.warn(
+          `Transient DB connectivity issue (${error.code}). Serving stale products cache.`,
+        );
+
+        return res.status(200).json({
+          success: true,
+          count: staleProducts.data.length,
+          data: staleProducts.data,
+        });
+      }
+
+      console.warn(`Transient DB connectivity issue (${error.code}) in getProducts.`);
+
+      return res.status(503).json({
+        success: false,
+        error: "Database temporarily unavailable. Please retry shortly.",
+      });
+    }
+
     console.error(error);
-    res.status(500).json({ success: false, error: "Server Error" });
+    return res.status(500).json({ success: false, error: "Server Error" });
   }
 };
 
