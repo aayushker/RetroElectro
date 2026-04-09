@@ -177,9 +177,9 @@ function BrowseCatalog() {
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] lg:items-end">
-            <label className="block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-start">
+            <label className="block space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
                 Search
               </span>
               <Input
@@ -187,16 +187,18 @@ function BrowseCatalog() {
                 onChange={(event) => setQuery(event.target.value)}
                 type="text"
                 placeholder="Try: camera phone, gaming, AMOLED"
+                className="h-11"
               />
             </label>
 
-            <label className="block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+            <label className="block space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
                 Category
               </span>
               <Select
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
+                className="h-11"
               >
                 {categories.map((item) => (
                   <option key={item} value={item}>
@@ -206,8 +208,8 @@ function BrowseCatalog() {
               </Select>
             </label>
 
-            <label className="block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+            <label className="block space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
                 Max price (INR)
               </span>
               <Input
@@ -215,21 +217,27 @@ function BrowseCatalog() {
                 onChange={(event) => setMaxPrice(event.target.value)}
                 type="number"
                 min="0"
-                placeholder={maxObservedPrice ? String(maxObservedPrice) : "50000"}
+                placeholder={
+                  maxObservedPrice ? String(maxObservedPrice) : "50000"
+                }
+                className="h-11"
               />
-              <p className="mt-2 text-xs text-re-text2">
+              <p className="min-h-[1.25rem] text-xs text-re-text2">
                 Budget cap{" "}
-                {maxPrice === "" ? "disabled" : formatInr(Number(maxPrice || 0))}
+                {maxPrice === ""
+                  ? "disabled"
+                  : formatInr(Number(maxPrice || 0))}
               </p>
             </label>
 
-            <label className="block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+            <label className="block space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
                 Sort by
               </span>
               <Select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value)}
+                className="h-11"
               >
                 <option value="rating">Highest rating</option>
                 <option value="price-asc">Price: low to high</option>
@@ -238,8 +246,13 @@ function BrowseCatalog() {
               </Select>
             </label>
 
-            <div className="flex items-end">
-              <Button type="button" variant="soft" onClick={clearFilters}>
+            <div className="flex items-end lg:pt-7">
+              <Button
+                type="button"
+                variant="soft"
+                onClick={clearFilters}
+                className="h-11 px-6"
+              >
                 Reset
               </Button>
             </div>
@@ -269,7 +282,9 @@ function BrowseCatalog() {
                       <span className="text-re-text1">
                         Want a side-by-side verdict?
                       </span>
-                      <Link to={`/compare?ids=${encodeURIComponent(product.id)}`}>
+                      <Link
+                        to={`/compare?ids=${encodeURIComponent(product.id)}`}
+                      >
                         <Button size="sm">Compare</Button>
                       </Link>
                     </div>

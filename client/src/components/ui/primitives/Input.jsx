@@ -2,9 +2,10 @@ function Input({ className = "", ...props }) {
   return (
     <input
       className={[
-        "w-full rounded-re-md border border-re-border0 bg-white/6 px-3 py-2.5 text-sm text-re-text0",
-        "placeholder:text-re-text2 outline-none transition duration-re-2 ease-re-2",
-        "focus:border-re-border1 focus:bg-white/8 focus:ring-2 focus:ring-re-accent0/35",
+        "w-full rounded-re-md border border-white/65 bg-white px-3 py-2.5 text-sm text-slate-900 caret-slate-900",
+        "placeholder:text-slate-500 outline-none transition duration-re-2 ease-re-2",
+        "focus:border-white focus:bg-white focus:ring-2 focus:ring-re-accent0/35",
+        "disabled:cursor-not-allowed disabled:bg-white/75 disabled:text-slate-500",
         className,
       ]
         .filter(Boolean)
@@ -15,4 +16,3 @@ function Input({ className = "", ...props }) {
 }
 
 export default Input;
-
