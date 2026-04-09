@@ -9,7 +9,9 @@ const inFlightProductRequests = new Map();
 const serializeProductsParams = (params = {}) =>
   JSON.stringify(
     Object.entries(params)
-      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .filter(
+        ([, value]) => value !== undefined && value !== null && value !== "",
+      )
       .sort(([left], [right]) => left.localeCompare(right)),
   );
 

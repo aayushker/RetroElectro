@@ -164,7 +164,9 @@ exports.getProducts = async (req, res) => {
 
     setCachedProducts(cacheKey, products);
 
-    return res.status(200).json({ success: true, count: products.length, data: products });
+    return res
+      .status(200)
+      .json({ success: true, count: products.length, data: products });
   } catch (error) {
     if (isRetryablePrismaError(error)) {
       const staleProducts = cacheKey ? getCachedProducts(cacheKey) : null;
@@ -181,7 +183,9 @@ exports.getProducts = async (req, res) => {
         });
       }
 
-      console.warn(`Transient DB connectivity issue (${error.code}) in getProducts.`);
+      console.warn(
+        `Transient DB connectivity issue (${error.code}) in getProducts.`,
+      );
 
       return res.status(503).json({
         success: false,
@@ -234,12 +238,10 @@ exports.createProduct = async (req, res) => {
     res.status(201).json({ success: true, data: product });
   } catch (error) {
     if (error.code === "P2002") {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          error: "Product with same brand and model already exists",
-        });
+      return res.status(409).json({
+        success: false,
+        error: "Product with same brand and model already exists",
+      });
     }
 
     console.error(error);
@@ -279,12 +281,10 @@ exports.updateProduct = async (req, res) => {
     }
 
     if (error.code === "P2002") {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          error: "Product with same brand and model already exists",
-        });
+      return res.status(409).json({
+        success: false,
+        error: "Product with same brand and model already exists",
+      });
     }
 
     console.error(error);
