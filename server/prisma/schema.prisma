@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id               String                        @id @default(cuid())
+  title            String
+  brand            String
+  modelName        String                        @map("model_name")
+  category         String                        @default("smartphone")
+  priceInr         Int                           @map("price_inr")
+  launchedYear     Int?                          @map("launched_year")
+  batteryMah       Int?                          @map("battery_mah")
+  ramGb            Int?                          @map("ram_gb")
+  screenSizeInches Float?                        @map("screen_size_inches")
+  weightGrams      Float?                        @map("weight_grams")
+  processor        String?
+  frontCameraMp    Float?                        @map("front_camera_mp")
+  backCameraMp     Float?                        @map("back_camera_mp")
+  specsText        String?                       @map("specs_text")
+  imageUrl         String?                       @map("image_url")
+  productUrl       String?                       @map("product_url")
+  tags             Json?
+  rating           Float                         @default(0)
+  reviews          Int                           @default(0)
+  embedding        Unsupported("vector(1024)")?
+  createdAt        DateTime                      @default(now()) @map("created_at")
+  updatedAt        DateTime                      @updatedAt @map("updated_at")
+
+  @@unique([brand, modelName], map: "products_brand_model_key")
+  @@index([category], map: "idx_products_category")
+  @@index([priceInr], map: "idx_products_price_inr")
+  @@index([batteryMah], map: "idx_products_battery_mah")
+  @@index([launchedYear], map: "idx_products_launched_year")
+  @@map("products")
+}
+
+model QueryLog {
+  id              String   @id @default(cuid())
+  rawQuery        String   @map("raw_query")
+  parsedQuery     Json?    @map("parsed_query")
+  topK            Int      @default(5) @map("top_k")
+  budgetInr       Int?     @map("budget_inr")
+  matchedProducts Json?    @map("matched_products")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt], map: "idx_query_logs_created_at")
+  @@map("query_logs")
+}

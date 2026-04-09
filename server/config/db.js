@@ -1,13 +1,21 @@
-const mongoose = require('mongoose');
+const prisma = require("../lib/prisma");
 
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`Error connecting to MongoDB: ${error.message}`);
-    process.exit(1);
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      "DATABASE_URL is not configured. Add it in your server environment variables.",
+    );
   }
+
+  await prisma.$queryRaw`SELECT 1`;
+  console.log("PostgreSQL Connected");
 };
 
-module.exports = connectDB; 
+const disconnectDB = async () => {
+  await prisma.$disconnect();
+};
+
+module.exports = {
+  connectDB,
+  disconnectDB,
+};

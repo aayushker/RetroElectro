@@ -1,11 +1,12 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { 
+const {
   getRecommendations,
-  logQuery
-} = require('../controllers/recommendationController');
+  logQuery,
+} = require("../controllers/recommendationController");
 
-router.post('/recommend', getRecommendations);
-router.post('/query-log', logQuery);
+router.post("/recommend", getRecommendations);
+router.post("/recommend/top-k", getRecommendations);
+router.post("/query-log", logQuery);
 
-module.exports = router; 
+module.exports = router;

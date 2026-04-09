@@ -1,93 +1,346 @@
-const axios = require('axios');
-const Product = require('../models/Product');
-const Query = require('../models/Query');
+const axios = require("axios");
+const prisma = require("../lib/prisma");
+const {
+  parseRecommendationQuery,
+  clampTopK,
+} = require("../utils/recommendationParser");
+
+const EMBEDDING_SERVICE_URL =
+  process.env.EMBEDDING_SERVICE_URL || "http://localhost:8000";
+
+const PRODUCT_SELECT_SQL = `
+  id,
+  title,
+  brand,
+  model_name AS "modelName",
+  category,
+  price_inr AS "priceInr",
+  launched_year AS "launchedYear",
+  battery_mah AS "batteryMah",
+  ram_gb AS "ramGb",
+  screen_size_inches AS "screenSizeInches",
+  weight_grams AS "weightGrams",
+  processor,
+  front_camera_mp AS "frontCameraMp",
+  back_camera_mp AS "backCameraMp",
+  specs_text AS "specsText",
+  image_url AS "imageUrl",
+  product_url AS "productUrl",
+  tags,
+  rating,
+  reviews
+`;
+
+const toVectorLiteral = (embedding) =>
+  `[${embedding.map((value) => Number(value).toFixed(8)).join(",")}]`;
+
+const parseFilterNumber = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const buildWhereClause = (parsedQuery, filters, params) => {
+  const whereParts = [];
+
+  if (parsedQuery.category) {
+    params.push(parsedQuery.category.toLowerCase());
+    whereParts.push(`category = $${params.length}`);
+  }
+
+  const queryBudget = parseFilterNumber(parsedQuery.budgetInr);
+  const bodyBudget = parseFilterNumber(filters.maxPriceInr);
+  const effectiveBudget =
+    queryBudget && bodyBudget
+      ? Math.min(queryBudget, bodyBudget)
+      : queryBudget || bodyBudget;
+
+  if (effectiveBudget) {
+    params.push(effectiveBudget);
+    whereParts.push(`price_inr <= $${params.length}`);
+  }
+
+  const minBatteryMah = parseFilterNumber(filters.minBatteryMah);
+  if (minBatteryMah) {
+    params.push(minBatteryMah);
+    whereParts.push(`battery_mah >= $${params.length}`);
+  }
+
+  const minRamGb = parseFilterNumber(filters.minRamGb);
+  if (minRamGb) {
+    params.push(minRamGb);
+    whereParts.push(`ram_gb >= $${params.length}`);
+  }
+
+  const minLaunchedYear = parseFilterNumber(filters.minLaunchedYear);
+  if (minLaunchedYear) {
+    params.push(minLaunchedYear);
+    whereParts.push(`launched_year >= $${params.length}`);
+  }
+
+  const brandFilter = String(filters.brand || "")
+    .trim()
+    .toLowerCase();
+  if (brandFilter) {
+    params.push(brandFilter);
+    whereParts.push(`LOWER(brand) = $${params.length}`);
+  } else if (parsedQuery.brands && parsedQuery.brands.length === 1) {
+    params.push(parsedQuery.brands[0]);
+    whereParts.push(`LOWER(brand) = $${params.length}`);
+  }
+
+  return whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
+};
+
+const getQueryEmbedding = async (rawQuery) => {
+  const endpoint = `${EMBEDDING_SERVICE_URL.replace(/\/$/, "")}/embed`;
+
+  try {
+    const response = await axios.post(
+      endpoint,
+      {
+        inputs: [`query: ${rawQuery}`],
+        normalize: true,
+      },
+      {
+        timeout: 25000,
+      },
+    );
+
+    const embedding = response.data?.embeddings?.[0];
+    if (!Array.isArray(embedding) || embedding.length === 0) {
+      return null;
+    }
+
+    return embedding.map((value) => Number(value));
+  } catch (error) {
+    console.warn(
+      "Embedding service unavailable, using SQL fallback ranking:",
+      error.message,
+    );
+    return null;
+  }
+};
+
+const fetchRankedProducts = async ({
+  parsedQuery,
+  filters,
+  topK,
+  queryEmbedding,
+}) => {
+  const params = [];
+  const whereClause = buildWhereClause(parsedQuery, filters, params);
+
+  if (queryEmbedding) {
+    params.push(toVectorLiteral(queryEmbedding));
+    const vectorParam = `$${params.length}::vector`;
+
+    params.push(topK);
+    const limitParam = `$${params.length}`;
+
+    const sql = `
+      SELECT
+        ${PRODUCT_SELECT_SQL},
+        COALESCE((1 - (embedding <=> ${vectorParam})), 0)::double precision AS score
+      FROM products
+      ${whereClause}
+      ORDER BY score DESC, price_inr ASC
+      LIMIT ${limitParam}
+    `;
+
+    return prisma.$queryRawUnsafe(sql, ...params);
+  }
+
+  params.push(topK);
+  const limitParam = `$${params.length}`;
+  const sql = `
+    SELECT
+      ${PRODUCT_SELECT_SQL},
+      0::double precision AS score
+    FROM products
+    ${whereClause}
+    ORDER BY price_inr ASC, battery_mah DESC NULLS LAST
+    LIMIT ${limitParam}
+  `;
+
+  return prisma.$queryRawUnsafe(sql, ...params);
+};
+
+const applyFeatureBoosts = (products, features) => {
+  if (!features || features.length === 0) {
+    return products;
+  }
+
+  const boosted = products.map((product) => {
+    let boost = 0;
+
+    if (features.includes("battery") && product.batteryMah) {
+      boost += Number(product.batteryMah) / 10000;
+    }
+
+    if (features.includes("camera") && product.backCameraMp) {
+      boost += Number(product.backCameraMp) / 200;
+    }
+
+    if (
+      (features.includes("performance") || features.includes("gaming")) &&
+      product.ramGb
+    ) {
+      boost += Number(product.ramGb) / 16;
+      if (product.launchedYear) {
+        boost += Math.max(Number(product.launchedYear) - 2018, 0) / 20;
+      }
+    }
+
+    if (features.includes("display") && product.screenSizeInches) {
+      boost += Number(product.screenSizeInches) / 20;
+    }
+
+    if (features.includes("processor") && product.processor) {
+      boost += 0.2;
+    }
+
+    if (features.includes("ram") && product.ramGb) {
+      boost += Number(product.ramGb) / 24;
+    }
+
+    return {
+      ...product,
+      score: Number(product.score || 0) + boost,
+    };
+  });
+
+  boosted.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+
+    return Number(a.priceInr || 0) - Number(b.priceInr || 0);
+  });
+
+  return boosted;
+};
+
+const buildFeaturesList = (product) => {
+  const features = [];
+
+  if (product.processor) {
+    features.push(product.processor);
+  }
+
+  if (product.ramGb) {
+    features.push(`${product.ramGb}GB RAM`);
+  }
+
+  if (product.batteryMah) {
+    features.push(`${product.batteryMah}mAh battery`);
+  }
+
+  if (product.backCameraMp) {
+    features.push(`${product.backCameraMp}MP rear camera`);
+  }
+
+  return features;
+};
+
+const normalizeProduct = (product) => {
+  const priceInr = Number(product.priceInr || 0);
+  const rating = Number(product.rating || 0);
+  const reviews = Number(product.reviews || 0);
+
+  return {
+    id: product.id,
+    title: product.title,
+    name: product.title,
+    brand: product.brand,
+    modelName: product.modelName,
+    category: product.category,
+    priceInr,
+    price: priceInr,
+    launchedYear: product.launchedYear,
+    batteryMah: product.batteryMah,
+    ramGb: product.ramGb,
+    screenSizeInches: product.screenSizeInches,
+    weightGrams: product.weightGrams,
+    processor: product.processor,
+    frontCameraMp: product.frontCameraMp,
+    backCameraMp: product.backCameraMp,
+    specsText: product.specsText,
+    imageUrl: product.imageUrl,
+    image: product.imageUrl || "https://via.placeholder.com/600x600?text=Phone",
+    link: product.productUrl,
+    tags: Array.isArray(product.tags) ? product.tags : [],
+    rating,
+    reviews,
+    features: buildFeaturesList(product),
+    score: Number((product.score || 0).toFixed(4)),
+  };
+};
 
 // @desc    Get product recommendations based on user query
 // @route   POST /api/recommend
 // @access  Public
 exports.getRecommendations = async (req, res) => {
   try {
-    const { query } = req.body;
-    
+    const { query, topK, filters = {}, budgetInr } = req.body;
+
     if (!query) {
-      return res.status(400).json({ success: false, error: 'Please provide a search query' });
+      return res
+        .status(400)
+        .json({ success: false, error: "Please provide a search query" });
     }
 
-    // Save the raw query
-    const queryRecord = new Query({
-      rawQuery: query
+    const safeTopK = clampTopK(topK ?? req.query.topK, 5);
+    const parsedQuery = parseRecommendationQuery(
+      query,
+      budgetInr ?? filters.maxPriceInr,
+    );
+    const queryEmbedding = await getQueryEmbedding(query.trim());
+
+    const rankedProducts = await fetchRankedProducts({
+      parsedQuery,
+      filters,
+      topK: safeTopK,
+      queryEmbedding,
     });
 
-    // Call the ML service to parse the query and get recommendations
-    // This is a placeholder and will be replaced with actual ML service call
-    let parsedQuery;
-    try {
-      // Attempt to call ML service
-      const mlResponse = await axios.post(process.env.ML_SERVICE_URL, { query });
-      parsedQuery = mlResponse.data;
-    } catch (error) {
-      console.error('ML Service error:', error.message);
-      
-      // Fallback: Simple parsing logic if ML service is unavailable
-      parsedQuery = simpleQueryParser(query);
-    }
+    const boostedProducts = applyFeatureBoosts(
+      rankedProducts,
+      parsedQuery.features,
+    ).slice(0, safeTopK);
+    const normalizedProducts = boostedProducts.map(normalizeProduct);
 
-    // Update query record with parsed fields
-    queryRecord.parsedFields = {
-      category: parsedQuery.category,
-      budget: parsedQuery.budget,
-      feature: parsedQuery.feature,
-      otherRequirements: parsedQuery.otherRequirements || []
-    };
-
-    // Find products matching the criteria
-    let productsQuery = {};
-    
-    if (parsedQuery.category) {
-      productsQuery.category = parsedQuery.category.toLowerCase();
-    }
-    
-    if (parsedQuery.budget) {
-      productsQuery.price = { $lte: parsedQuery.budget };
-    }
-
-    // Find products
-    let products = await Product.find(productsQuery);
-
-    // Further filter products based on features if available
-    if (parsedQuery.feature && products.length > 0) {
-      products = products.filter(product => {
-        // Check if any tag contains the feature
-        if (product.tags && product.tags.some(tag => tag.toLowerCase().includes(parsedQuery.feature.toLowerCase()))) {
-          return true;
-        }
-        
-        // Check if any spec contains the feature
-        if (product.specs) {
-          return Object.values(product.specs).some(spec => 
-            spec && typeof spec === 'string' && spec.toLowerCase().includes(parsedQuery.feature.toLowerCase())
-          );
-        }
-        
-        return false;
-      });
-    }
-
-    // Save product references to the query record
-    queryRecord.matchedProducts = products.map(product => product._id);
-    await queryRecord.save();
-
-    res.status(200).json({ 
-      success: true, 
-      count: products.length, 
+    await prisma.queryLog.create({
       data: {
-        products,
-        query: parsedQuery
-      }
+        rawQuery: query,
+        parsedQuery,
+        topK: safeTopK,
+        budgetInr: parsedQuery.budgetInr || null,
+        matchedProducts: normalizedProducts.map((product) => ({
+          id: product.id,
+          priceInr: product.priceInr,
+          score: product.score,
+        })),
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        rawQuery: query,
+        parsedQuery,
+        topK: safeTopK,
+        count: normalizedProducts.length,
+        products: normalizedProducts,
+        embeddingUsed: Boolean(queryEmbedding),
+      },
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    res.status(500).json({ success: false, error: "Server Error" });
   }
 };
 
@@ -96,69 +349,27 @@ exports.getRecommendations = async (req, res) => {
 // @access  Public
 exports.logQuery = async (req, res) => {
   try {
-    const { query, selectedProducts } = req.body;
-    
+    const { query, selectedProducts = [], meta = {} } = req.body;
+
     if (!query) {
-      return res.status(400).json({ success: false, error: 'Please provide a search query' });
+      return res
+        .status(400)
+        .json({ success: false, error: "Please provide a search query" });
     }
 
-    const queryLog = await Query.create({
-      rawQuery: query,
-      matchedProducts: selectedProducts || []
+    const queryLog = await prisma.queryLog.create({
+      data: {
+        rawQuery: query,
+        parsedQuery: meta.parsedQuery || null,
+        topK: clampTopK(meta.topK, 5),
+        budgetInr: parseFilterNumber(meta.budgetInr),
+        matchedProducts: selectedProducts,
+      },
     });
 
     res.status(201).json({ success: true, data: queryLog });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Server Error' });
+    console.error(error);
+    res.status(500).json({ success: false, error: "Server Error" });
   }
 };
-
-// Simple fallback query parser for when ML service is unavailable
-const simpleQueryParser = (query) => {
-  const lowercaseQuery = query.toLowerCase();
-  const result = {
-    category: null,
-    budget: null,
-    feature: null,
-    otherRequirements: []
-  };
-
-  // Extract category
-  const categories = ['smartphone', 'phone', 'laptop', 'headphone', 'smartwatch', 'camera', 'tablet', 'speaker', 'tv', 'television'];
-  for (const category of categories) {
-    if (lowercaseQuery.includes(category)) {
-      result.category = category === 'phone' ? 'smartphone' : 
-                       category === 'tv' ? 'television' : 
-                       category;
-      break;
-    }
-  }
-
-  // Extract budget
-  const budgetRegex = /under\s+(\d+)k?|(\d+)k?\s+budget|budget\s+(\d+)k?|(\d+)\s*rupees|rs\.?\s*(\d+)/i;
-  const budgetMatch = lowercaseQuery.match(budgetRegex);
-  
-  if (budgetMatch) {
-    const budgetValue = parseInt(
-      budgetMatch[1] || budgetMatch[2] || budgetMatch[3] || budgetMatch[4] || budgetMatch[5]
-    );
-    
-    // Convert to actual value if 'k' is used (like 30k = 30000)
-    if (lowercaseQuery.includes('k') && budgetValue < 1000) {
-      result.budget = budgetValue * 1000;
-    } else {
-      result.budget = budgetValue;
-    }
-  }
-
-  // Extract feature focus
-  const features = ['battery', 'camera', 'performance', 'gaming', 'storage', 'display', 'sound', 'processor', 'ram'];
-  for (const feature of features) {
-    if (lowercaseQuery.includes(feature)) {
-      result.feature = feature;
-      break;
-    }
-  }
-
-  return result;
-}; 
