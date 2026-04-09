@@ -14,7 +14,7 @@
     --surface-0: rgba(255, 255, 255, 0.06);
     --surface-1: rgba(255, 255, 255, 0.09);
     --surface-2: rgba(255, 255, 255, 0.12);
-    --border-0: rgba(255, 255, 255, 0.10);
+    --border-0: rgba(255, 255, 255, 0.1);
     --border-1: rgba(255, 255, 255, 0.16);
 
     --text-0: rgba(255, 255, 255, 0.92);
@@ -58,7 +58,8 @@
     margin: 0;
     min-height: 100dvh;
     font-family: "Manrope", "Space Grotesk", "Segoe UI", sans-serif;
-    background: radial-gradient(
+    background:
+      radial-gradient(
         1200px 800px at 18% 10%,
         rgba(255, 255, 255, 0.08),
         rgba(255, 255, 255, 0) 55%
@@ -70,7 +71,7 @@
       ),
       radial-gradient(
         1100px 900px at 45% 92%,
-        rgba(167, 243, 208, 0.10),
+        rgba(167, 243, 208, 0.1),
         rgba(167, 243, 208, 0) 60%
       ),
       linear-gradient(180deg, var(--bg-0), var(--bg-2));
@@ -104,14 +105,15 @@
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-image: radial-gradient(
+    background-image:
+      radial-gradient(
         circle at 20% 10%,
         rgba(255, 255, 255, 0.06),
         rgba(255, 255, 255, 0) 55%
       ),
       radial-gradient(
         circle at 85% 20%,
-        rgba(188, 212, 255, 0.10),
+        rgba(188, 212, 255, 0.1),
         rgba(188, 212, 255, 0) 60%
       );
     opacity: 1;
@@ -138,7 +140,7 @@
   .re-glass {
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.10),
+      rgba(255, 255, 255, 0.1),
       rgba(255, 255, 255, 0.06)
     );
     border: 1px solid var(--border-0);
