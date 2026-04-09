@@ -4,8 +4,18 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+fastapi = "*"
+numpy = "*"
+pandas = "*"
+psycopg = {extras = ["binary"], version = "*"}
+pydantic = "*"
+python-dotenv = "*"
+requests = "*"
+sentence-transformers = "*"
+uvicorn = {extras = ["standard"], version = "*"}
 
 [dev-packages]
+pytest = "*"
 
 [requires]
 python_version = "3.13"
