@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Container from "./primitives/Container";
+import Surface from "./primitives/Surface";
+import SectionHeading from "./primitives/SectionHeading";
+import Input from "./primitives/Input";
+import Button from "./primitives/Button";
+import Badge from "./primitives/Badge";
 
 function HeroSection() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,83 +24,88 @@ function HeroSection() {
   };
 
   return (
-    <div className="bg-gradient-to-b from-purple-900 via-blue-800 to-indigo-900 text-white">
-      <div className="container mx-auto px-4 py-20 md:py-32">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            Find Your Perfect Electronic Device
-          </h1>
-          <p className="text-xl md:text-2xl mb-10 text-blue-100">
-            Just describe what you need, and we'll find the best match for your
-            requirements.
-          </p>
-
-          <form
-            onSubmit={handleSubmit}
-            className="relative max-w-2xl mx-auto mb-10"
-          >
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="I want a mobile phone under 20000 with good battery life..."
-              className="w-full px-6 py-4 rounded-full text-lg text-gray-900 shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors"
-            >
-              Find Products
-            </button>
-          </form>
-
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <p className="text-blue-200">Popular searches:</p>
-            <button
-              onClick={() =>
-                handlePopularSearch(
-                  "Best phone under 20000 with strong battery",
-                )
-              }
-              className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors"
-            >
-              Phone under 20000 with battery
-            </button>
-            <button
-              onClick={() =>
-                handlePopularSearch("Smartphone with best camera under 30000")
-              }
-              className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors"
-            >
-              Best camera under 30000
-            </button>
-            <button
-              onClick={() =>
-                handlePopularSearch("Gaming phone with 8GB RAM under 25000")
-              }
-              className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors"
-            >
-              Gaming phone under 25000
-            </button>
+    <section className="py-10">
+      <Container>
+        <Surface className="relative overflow-hidden rounded-re-xl px-6 py-12 sm:px-10">
+          <div className="pointer-events-none absolute inset-0 opacity-60">
+            <div className="absolute -left-24 -top-28 h-[520px] w-[520px] rounded-full bg-white/8 blur-3xl" />
+            <div className="absolute -right-24 -top-28 h-[520px] w-[520px] rounded-full bg-re-accent0/15 blur-3xl" />
+            <div className="absolute -bottom-40 left-1/2 h-[620px] w-[620px] -translate-x-1/2 rounded-full bg-re-accent2/10 blur-3xl" />
           </div>
-        </div>
-      </div>
 
-      {/* Wave shape divider */}
-      <div className="w-full">
-        <svg
-          className="w-full h-16 md:h-24"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 1440 320"
-        >
-          <path
-            fill="#ffffff"
-            fillOpacity="1"
-            d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,133.3C672,139,768,181,864,181.3C960,181,1056,139,1152,122.7C1248,107,1344,117,1392,122.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
-          ></path>
-        </svg>
-      </div>
-    </div>
+          <div className="relative mx-auto max-w-4xl text-center re-fade-up">
+            <SectionHeading
+              eyebrow="RetroElectro"
+              title="Find the right device in minutes"
+              subtitle="Describe what you need in plain language. We’ll shortlist the best matches from the catalog, ranked by relevance."
+              className="mx-auto max-w-3xl"
+            />
+
+            <form
+              onSubmit={handleSubmit}
+              className="mx-auto mt-8 grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+            >
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="e.g. phone under 20000 with strong battery and good camera"
+                className="h-14 border-white/65 bg-white px-5 text-base text-slate-900 caret-slate-900 placeholder:text-slate-500 focus:border-white focus:bg-white"
+              />
+              <Button type="submit" className="h-14 px-8 text-base sm:w-auto">
+                Find products
+              </Button>
+            </form>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.24em] leading-none text-re-text2">
+                Popular
+              </span>
+              <button
+                type="button"
+                className="inline-flex"
+                onClick={() =>
+                  handlePopularSearch(
+                    "Best phone under 20000 with strong battery",
+                  )
+                }
+              >
+                <Badge className="h-8 hover:bg-white/10">
+                  Battery under 20k
+                </Badge>
+              </button>
+              <button
+                type="button"
+                className="inline-flex"
+                onClick={() =>
+                  handlePopularSearch("Smartphone with best camera under 30000")
+                }
+              >
+                <Badge className="h-8 hover:bg-white/10">
+                  Camera under 30k
+                </Badge>
+              </button>
+              <button
+                type="button"
+                className="inline-flex"
+                onClick={() =>
+                  handlePopularSearch("Gaming phone with 8GB RAM under 25000")
+                }
+              >
+                <Badge className="h-8 hover:bg-white/10">
+                  Gaming under 25k
+                </Badge>
+              </button>
+            </div>
+
+            {/* <div className="mt-8 flex flex-wrap justify-center gap-2">
+              <Badge>Browse</Badge>
+              <Badge>Compare</Badge>
+              <Badge>Semantic search</Badge>
+            </div> */}
+          </div>
+        </Surface>
+      </Container>
+    </section>
   );
 }
 

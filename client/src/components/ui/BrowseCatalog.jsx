@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ProductCard } from "./ProductCard";
 import { getProducts } from "../../services/api";
+import PageShell from "./primitives/PageShell";
+import SectionHeading from "./primitives/SectionHeading";
+import Badge from "./primitives/Badge";
+import Input from "./primitives/Input";
+import Select from "./primitives/Select";
+import Button from "./primitives/Button";
+import Skeleton from "./primitives/Skeleton";
 
 const formatInr = (value) =>
   new Intl.NumberFormat("en-IN", {
@@ -127,181 +134,152 @@ function BrowseCatalog() {
 
   if (loading) {
     return (
-      <section className="bg-slate-50 py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="py-10">
+        <PageShell>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white"
-              />
+              <Skeleton key={index} className="h-72" />
             ))}
           </div>
-        </div>
+        </PageShell>
       </section>
     );
   }
 
   if (error) {
     return (
-      <section className="bg-slate-50 py-16">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-rose-200 bg-white px-6 py-10 text-center shadow-sm">
-          <h2 className="text-2xl font-bold text-rose-700">
+      <section className="py-10">
+        <PageShell className="text-center">
+          <h2 className="text-2xl font-semibold text-re-text0">
             Unable to load catalog
           </h2>
-          <p className="mt-2 text-slate-600">{error}</p>
-        </div>
+          <p className="mt-2 text-sm text-re-text1">{error}</p>
+        </PageShell>
       </section>
     );
   }
 
   return (
-    <section className="bg-[radial-gradient(circle_at_top_right,_#d1fae5_0,_#eff6ff_40%,_#f8fafc_75%)] py-10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <header className="mb-8 rounded-3xl border border-cyan-100 bg-white/85 p-6 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-700">
-                Browse
-              </p>
-              <h1 className="mt-1 text-3xl font-bold text-slate-900 md:text-4xl">
-                Explore the RetroElectro Catalog
-              </h1>
-              <p className="mt-2 max-w-3xl text-slate-600">
-                Filter by price, category, and priorities, then jump into
-                Compare with one click.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <span className="rounded-full bg-cyan-50 px-4 py-2 font-semibold text-cyan-700">
-                {stats.totalProducts} products
-              </span>
-              <span className="rounded-full bg-emerald-50 px-4 py-2 font-semibold text-emerald-700">
-                {stats.brands} brands
-              </span>
-              <span className="rounded-full bg-amber-50 px-4 py-2 font-semibold text-amber-700">
-                Avg rating {stats.averageRating.toFixed(1)}
-              </span>
+    <section className="py-10">
+      <PageShell>
+        <div className="flex flex-col gap-7">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <SectionHeading
+              eyebrow="Browse"
+              title="Explore the RetroElectro catalog"
+              subtitle="Filter by price, category, and launch year. Then jump into Compare with one click."
+            />
+
+            <div className="flex flex-wrap gap-2">
+              <Badge>{stats.totalProducts} products</Badge>
+              <Badge>{stats.brands} brands</Badge>
+              <Badge>avg {stats.averageRating.toFixed(1)} rating</Badge>
             </div>
           </div>
-        </header>
 
-        <div className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="grid gap-4 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] lg:items-end">
+          <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] lg:items-end">
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
                 Search
               </span>
-              <input
+              <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 type="text"
                 placeholder="Try: camera phone, gaming, AMOLED"
-                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
               />
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
                 Category
               </span>
-              <select
+              <Select
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
               >
                 {categories.map((item) => (
                   <option key={item} value={item}>
                     {item === "all" ? "All categories" : item}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">
-                Max Price
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+                Max price (INR)
               </span>
-              <input
+              <Input
                 value={maxPrice}
                 onChange={(event) => setMaxPrice(event.target.value)}
                 type="number"
                 min="0"
-                placeholder={
-                  maxObservedPrice ? String(maxObservedPrice) : "50000"
-                }
-                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                placeholder={maxObservedPrice ? String(maxObservedPrice) : "50000"}
               />
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-re-text2">
                 Budget cap{" "}
-                {maxPrice === ""
-                  ? "disabled"
-                  : formatInr(Number(maxPrice || 0))}
+                {maxPrice === "" ? "disabled" : formatInr(Number(maxPrice || 0))}
               </p>
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">
-                Sort By
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+                Sort by
               </span>
-              <select
+              <Select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
               >
                 <option value="rating">Highest rating</option>
                 <option value="price-asc">Price: low to high</option>
                 <option value="price-desc">Price: high to low</option>
                 <option value="latest">Latest launch</option>
-              </select>
+              </Select>
             </label>
 
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-
-        {filteredProducts.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-900">
-              No products match these filters
-            </h2>
-            <p className="mt-2 text-slate-600">
-              Try widening your budget or using a broader search phrase.
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className="mb-4 text-sm font-medium text-slate-600">
-              Showing {filteredProducts.length}{" "}
-              {filteredProducts.length === 1 ? "product" : "products"}
-            </p>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => (
-                <div key={product.id} className="space-y-3">
-                  <ProductCard product={product} />
-                  <div className="flex items-center justify-between rounded-xl border border-cyan-100 bg-cyan-50/60 px-4 py-2 text-sm">
-                    <span className="font-medium text-cyan-800">
-                      Want a side-by-side verdict?
-                    </span>
-                    <Link
-                      to={`/compare?ids=${encodeURIComponent(product.id)}`}
-                      className="rounded-full bg-cyan-700 px-3 py-1.5 font-semibold text-white transition hover:bg-cyan-600"
-                    >
-                      Compare
-                    </Link>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-end">
+              <Button type="button" variant="soft" onClick={clearFilters}>
+                Reset
+              </Button>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+
+          {filteredProducts.length === 0 ? (
+            <div className="rounded-re-xl border border-re-border0 bg-white/4 px-6 py-14 text-center">
+              <h2 className="text-2xl font-semibold text-re-text0">
+                No products match these filters
+              </h2>
+              <p className="mt-2 text-sm text-re-text1">
+                Try widening budget or using a broader query.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-re-text2">
+                Showing {filteredProducts.length}{" "}
+                {filteredProducts.length === 1 ? "product" : "products"}
+              </p>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {filteredProducts.map((product) => (
+                  <div key={product.id} className="space-y-3">
+                    <ProductCard product={product} />
+                    <div className="flex items-center justify-between rounded-re-lg border border-re-border0 bg-white/4 px-4 py-2 text-sm">
+                      <span className="text-re-text1">
+                        Want a side-by-side verdict?
+                      </span>
+                      <Link to={`/compare?ids=${encodeURIComponent(product.id)}`}>
+                        <Button size="sm">Compare</Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </PageShell>
     </section>
   );
 }

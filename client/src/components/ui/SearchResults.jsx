@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ProductCard } from "./ProductCard";
 import { getRecommendations, logQuery } from "../../services/api";
+import PageShell from "./primitives/PageShell";
+import SectionHeading from "./primitives/SectionHeading";
+import Input from "./primitives/Input";
+import Select from "./primitives/Select";
+import Button from "./primitives/Button";
+import Skeleton from "./primitives/Skeleton";
+import Badge from "./primitives/Badge";
 
 function SearchResults() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -106,132 +113,150 @@ function SearchResults() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <section className="py-10">
+        <PageShell>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <Skeleton key={idx} className="h-72" />
+            ))}
+          </div>
+        </PageShell>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
-        <p className="text-gray-600">{error}</p>
-      </div>
+      <section className="py-10">
+        <PageShell className="text-center">
+          <h2 className="text-2xl font-semibold text-re-text0">Error</h2>
+          <p className="mt-2 text-sm text-re-text1">{error}</p>
+        </PageShell>
+      </section>
     );
   }
 
   if (!query) {
     return (
-      <div className="text-center py-12 px-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Start with a query
-        </h2>
-        <p className="text-gray-600">
-          Try searching for a phone with a budget and a key feature.
-        </p>
-        <div className="mt-5 flex flex-wrap justify-center gap-3">
-          <Link
-            to="/browse"
-            className="rounded-full bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-600"
-          >
-            Browse Catalog
-          </Link>
-          <Link
-            to="/compare"
-            className="rounded-full border border-cyan-700 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
-          >
-            Open Compare
-          </Link>
-        </div>
-      </div>
+      <section className="py-10">
+        <PageShell className="text-center">
+          <h2 className="font-display text-3xl text-re-text0">
+            Start with a query
+          </h2>
+          <p className="mt-2 text-sm text-re-text1">
+            Describe what you need (budget + one priority) and we’ll shortlist
+            the best matches.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link to="/browse">
+              <Button>Browse catalog</Button>
+            </Link>
+            <Link to="/compare">
+              <Button variant="ghost">Open compare</Button>
+            </Link>
+          </div>
+        </PageShell>
+      </section>
     );
   }
 
   return (
-    <section className="py-12 bg-gray-50">
-      <div className="container mx-auto px-4">
-        {/* Search query and results count */}
-        <div className="mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-            Results for "{query}"
-          </h2>
-          <p className="text-gray-600 mt-2">
-            Found {products.length} products that match your requirements
-            {parsedQuery?.budgetInr
-              ? ` within ${formatInr(parsedQuery.budgetInr)}`
-              : ""}
-          </p>
-        </div>
-
-        {/* Filter and sort options */}
-        <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-col lg:flex-row justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-gray-700 font-medium">Budget (INR)</span>
-            <input
-              type="number"
-              min="0"
-              value={budgetInput}
-              onChange={(event) => setBudgetInput(event.target.value)}
-              placeholder="20000"
-              className="border border-gray-300 rounded px-3 py-2 text-sm w-36"
+    <section className="py-10">
+      <PageShell>
+        <div className="flex flex-col gap-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <SectionHeading
+              eyebrow="Results"
+              title={`Results for “${query}”`}
+              subtitle={`Found ${products.length} products${
+                parsedQuery?.budgetInr
+                  ? ` within ${formatInr(parsedQuery.budgetInr)}`
+                  : ""
+              }.`}
             />
-
-            <span className="text-gray-700 font-medium">Top K</span>
-            <select
-              value={topKInput}
-              onChange={(event) => setTopKInput(event.target.value)}
-              className="border border-gray-300 rounded px-2 py-2 text-sm"
-            >
-              {[3, 5, 8, 10, 15, 20].map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={applyFilters}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors"
-            >
-              Apply
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <Badge>Sort: {sortBy}</Badge>
+              <Badge>TopK: {clampTopK(topKInput)}</Badge>
+              {budgetInput ? <Badge>Budget: {formatInr(budgetInput)}</Badge> : null}
+            </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-700">Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-sm"
-            >
-              <option value="relevance">Relevance</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="rating">Rating</option>
-            </select>
+          <div className="grid gap-3 lg:grid-cols-[1fr_160px_170px_160px_auto] lg:items-end">
+            <label className="block">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+                Budget (INR)
+              </span>
+              <Input
+                type="number"
+                min="0"
+                value={budgetInput}
+                onChange={(event) => setBudgetInput(event.target.value)}
+                placeholder="20000"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+                Top K
+              </span>
+              <Select
+                value={topKInput}
+                onChange={(event) => setTopKInput(event.target.value)}
+              >
+                {[3, 5, 8, 10, 15, 20].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-re-text2">
+                Sort by
+              </span>
+              <Select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+              >
+                <option value="relevance">Relevance</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="rating">Rating</option>
+              </Select>
+            </label>
+
+            <div className="flex items-end">
+              <Button onClick={applyFilters} variant="soft">
+                Apply
+              </Button>
+            </div>
+
+            <div className="hidden items-end lg:flex">
+              <Link to="/browse">
+                <Button variant="ghost">Browse</Button>
+              </Link>
+            </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {sortedProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+
+          {sortedProducts.length === 0 ? (
+            <div className="rounded-re-xl border border-re-border0 bg-white/4 px-6 py-12 text-center">
+              <h3 className="text-xl font-semibold text-re-text0">
+                No products matched this filter
+              </h3>
+              <p className="mt-2 text-sm text-re-text1">
+                Try increasing budget or switching to relevance sorting.
+              </p>
+            </div>
+          ) : null}
         </div>
-
-        {/* Products grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
-          {sortedProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-
-        {sortedProducts.length === 0 && (
-          <div className="text-center py-10 bg-white rounded-lg border border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-900">
-              No products matched this filter
-            </h3>
-            <p className="text-gray-600 mt-2">
-              Try increasing budget or reducing strict filters like minimum
-              battery or RAM.
-            </p>
-          </div>
-        )}
-      </div>
+      </PageShell>
     </section>
   );
 }
