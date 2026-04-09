@@ -4,6 +4,7 @@ function ProductCard({ product }) {
   const rating = Number(product.rating ?? 0);
   const reviews = Number(product.reviews ?? 0);
   const score = Number(product.score ?? 0);
+  const detailsUrl = product.productUrl || product.link || null;
 
   const features =
     Array.isArray(product.features) && product.features.length > 0
@@ -109,9 +110,23 @@ function ProductCard({ product }) {
               </span>
             )}
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            View Details
-          </button>
+          {detailsUrl ? (
+            <a
+              href={detailsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              View Details
+            </a>
+          ) : (
+            <button
+              type="button"
+              className="bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium cursor-default"
+            >
+              Specs Added
+            </button>
+          )}
         </div>
       </div>
     </div>

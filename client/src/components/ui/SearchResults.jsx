@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ProductCard } from "./ProductCard";
 import { getRecommendations, logQuery } from "../../services/api";
 
@@ -123,13 +123,27 @@ function SearchResults() {
 
   if (!query) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12 px-4">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           Start with a query
         </h2>
         <p className="text-gray-600">
           Try searching for a phone with a budget and a key feature.
         </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <Link
+            to="/browse"
+            className="rounded-full bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-600"
+          >
+            Browse Catalog
+          </Link>
+          <Link
+            to="/compare"
+            className="rounded-full border border-cyan-700 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50"
+          >
+            Open Compare
+          </Link>
+        </div>
       </div>
     );
   }
